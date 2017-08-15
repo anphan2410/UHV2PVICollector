@@ -1,8 +1,12 @@
 #include "uhv2pvicollectordb.h"
 
-UHV2PVICollectorDB::UHV2PVICollectorDB(QObject *parent) : QObject(parent)
+UHV2PVICollectorDB::UHV2PVICollectorDB(QObject *parent) : QObject(parent), currentBP(new BinaryProtocol(0))
 {
     anIf(UHV2PVICollectorDBDbgEn, anTrk("Construct Object"));
+}
+
+bool UHV2PVICollectorDB::initialize()
+{
     localDb = QSqlDatabase::addDatabase("QMYSQL");
     localDb.setHostName("localhost");
     localDb.setDatabaseName("raspberry");
@@ -12,12 +16,152 @@ UHV2PVICollectorDB::UHV2PVICollectorDB(QObject *parent) : QObject(parent)
     if (localDb.open())
     {
         anIf(UHV2PVICollectorDBDbgEn, anAck("OK Local Database Connected !"));
-        currentQuery = QSqlQuery();
         currentGlobalID = 0;
+        currentQuery = QSqlQuery();        
     }
     else
     {
         anIf(UHV2PVICollectorDBDbgEn, anError("Failed To Connect Local Database !"));
         emit errorOccurred();
+        return false;
     }
+    anIf(UHV2PVICollectorDBDbgEn, anAck("OK Initialized !"));
+    return true;
 }
+
+bool UHV2PVICollectorDB::gotoNextRecord()
+{
+    anIf(UHV2PVICollectorDBDbgEn, anTrk("Retrieve New Record"));
+    qDebug() << "HSDYE5Y";
+    currentQuery = QSqlQuery();
+    currentQuery.prepare("SELECT GlobalID,pumpAddr,pumpCH FROM stations WHERE GlobalID>" +
+                        QString::number(currentGlobalID) + " ORDER BY GlobalID ASC LIMIT 1");
+    if (currentQuery.exec())
+        qDebug() << "OK";
+    else
+        qDebug() << "KO";
+    if (!currentQuery.next())
+    {
+        qDebug() << "asvt4q3";
+        currentGlobalID = 0;
+        currentQuery.exec("SELECT GlobalID,pumpAddr,pumpCH FROM stations WHERE GlobalID>" +
+                            QString::number(currentGlobalID) + " ORDER BY GlobalID ASC LIMIT 1");
+        if (!currentQuery.next())
+            return false;
+    }
+    currentGlobalID = currentQuery.value("GlobalID").toInt();
+    anIf(UHV2PVICollectorDBDbgEn, anVar(currentGlobalID));
+    return true;
+}
+
+void UHV2PVICollectorDB::emitReadP()
+{
+    gotoNextRecord();
+//    if (gotoNextRecord())
+//    {
+        currentBPNo = currentQuery.value("pumpAddr").toInt();
+        currentCH = currentQuery.value("pumpCH").toInt();
+        currentBP->SetBPNo(currentBPNo);
+        currentBP->ReadP().Ch(currentCH);
+        emit CommandOut(currentBP->GenMsg());
+//    }
+//    else
+//    {
+//        anIf(UHV2PVICollectorDBDbgEn, anWarn("Not Found Data!"));
+//        emit pause();
+//    }
+}
+
+void UHV2PVICollectorDB::emitReadV()
+{
+    currentBP->SetBPNo(currentBPNo);
+    currentBP->ReadV().Ch(currentCH);
+    emit CommandOut(currentBP->GenMsg());
+}
+
+void UHV2PVICollectorDB::emitReadI()
+{
+    currentBP->SetBPNo(currentBPNo);
+    currentBP->ReadI().Ch(currentCH);
+    emit CommandOut(currentBP->GenMsg());
+}
+
+void UHV2PVICollectorDB::emitMsgToDatabaseUpdatePVI()
+{
+    anIf(UHV2PVICollectorDBDbgEn,
+            anAck("Emit PVI To Update Database !");
+            anVar(currentGlobalID);
+            anVar(currentPressure);
+            anVar(currentVoltage);
+            anVar(currentCurrent));
+    emit MessageToDatabase(currentGlobalID,currentPressure,currentVoltage,currentCurrent);
+}
+
+void UHV2PVICollectorDB::saveP()
+{
+    if (currentReplyFromPump.isEmpty())
+    {
+        currentPressure = "0";
+    }
+    else
+    {
+        currentBP = &BinaryProtocol::BP(currentReplyFromPump);
+        currentPressure = QString(currentBP->GetData());
+    }
+    anIf(UHV2PVICollectorDBDbgEn, anVar(currentPressure));
+    emit DataObtained();
+}
+
+void UHV2PVICollectorDB::saveV()
+{
+    if (currentReplyFromPump.isEmpty())
+    {
+        currentVoltage = "0";
+    }
+    else
+    {
+        currentBP = &BinaryProtocol::BP(currentReplyFromPump);
+        currentVoltage = QString(currentBP->GetData());
+    }
+    anIf(UHV2PVICollectorDBDbgEn, anVar(currentVoltage));
+    emit DataObtained();
+}
+
+void UHV2PVICollectorDB::saveI()
+{
+    if (currentReplyFromPump.isEmpty())
+    {
+        currentCurrent = "0";
+    }
+    else
+    {
+        currentBP = &BinaryProtocol::BP(currentReplyFromPump);
+        currentCurrent = QString(currentBP->GetData());
+    }
+    anIf(UHV2PVICollectorDBDbgEn, anVar(currentCurrent));
+    emit DataObtained();
+}
+
+void UHV2PVICollectorDB::setPreviousReadState(const QString &StateObjName)
+{
+    previousReadState = StateObjName;
+}
+
+void UHV2PVICollectorDB::resume()
+{
+    emit directTransitionRequest(previousReadState);
+}
+
+void UHV2PVICollectorDB::processDataFromPump(const QByteArray &data)
+{
+    anIf(UHV2PVICollectorDBDbgEn, anAck("Data From Pump Received !");anVar(data.toHex()););
+    currentReplyFromPump = data;
+    if (previousReadState=="emitReadP")
+        saveP();
+    else if (previousReadState=="emitReadV")
+        saveV();
+    else
+        saveI();
+}
+
+

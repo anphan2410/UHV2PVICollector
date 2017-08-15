@@ -10,7 +10,6 @@ CONFIG -= app_bundle
 TEMPLATE = app
 
 SOURCES += main.cpp \
-    main.cpp \
     UHV2PVICollector/uhv2pvicollector.cpp \
     UHV2PVICollector/uhv2pvicollectordb.cpp \
     UHV2PVICollector/emitreadp.cpp \
@@ -19,7 +18,9 @@ SOURCES += main.cpp \
     UHV2PVICollector/wait4v.cpp \
     UHV2PVICollector/emitreadi.cpp \
     UHV2PVICollector/wait4i.cpp \
-    UHV2PVICollector/directtransition.cpp
+    UHV2PVICollector/directtransition.cpp \
+    binaryprotocol.cpp \
+    UHV2PVICollector/idle.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -41,4 +42,8 @@ HEADERS += \
     UHV2PVICollector/wait4v.h \
     UHV2PVICollector/emitreadi.h \
     UHV2PVICollector/wait4i.h \
-    UHV2PVICollector/directtransition.h
+    UHV2PVICollector/directtransition.h \
+    anlogger.h \
+    binaryprotocol.h \
+    straystuffs.h \
+    UHV2PVICollector/idle.h
