@@ -32,17 +32,10 @@ bool UHV2PVICollectorDB::initialize()
 bool UHV2PVICollectorDB::gotoNextRecord()
 {
     anIf(UHV2PVICollectorDBDbgEn, anTrk("Retrieve New Record"));
-    qDebug() << "HSDYE5Y";
-    currentQuery = QSqlQuery();
-    currentQuery.prepare("SELECT GlobalID,pumpAddr,pumpCH FROM stations WHERE GlobalID>" +
+    currentQuery.exec("SELECT GlobalID,pumpAddr,pumpCH FROM stations WHERE GlobalID>" +
                         QString::number(currentGlobalID) + " ORDER BY GlobalID ASC LIMIT 1");
-    if (currentQuery.exec())
-        qDebug() << "OK";
-    else
-        qDebug() << "KO";
     if (!currentQuery.next())
     {
-        qDebug() << "asvt4q3";
         currentGlobalID = 0;
         currentQuery.exec("SELECT GlobalID,pumpAddr,pumpCH FROM stations WHERE GlobalID>" +
                             QString::number(currentGlobalID) + " ORDER BY GlobalID ASC LIMIT 1");
@@ -50,39 +43,37 @@ bool UHV2PVICollectorDB::gotoNextRecord()
             return false;
     }
     currentGlobalID = currentQuery.value("GlobalID").toInt();
+    currentBPNo = currentQuery.value("pumpAddr").toInt();
+    currentCH = currentQuery.value("pumpCH").toInt();
+    currentBP->SetBPNo(currentBPNo);
+    currentBP->Ch(currentCH);
     anIf(UHV2PVICollectorDBDbgEn, anVar(currentGlobalID));
     return true;
 }
 
 void UHV2PVICollectorDB::emitReadP()
 {
-    gotoNextRecord();
-//    if (gotoNextRecord())
-//    {
-        currentBPNo = currentQuery.value("pumpAddr").toInt();
-        currentCH = currentQuery.value("pumpCH").toInt();
-        currentBP->SetBPNo(currentBPNo);
-        currentBP->ReadP().Ch(currentCH);
+    if (gotoNextRecord())
+    {
+        currentBP->ReadP();
         emit CommandOut(currentBP->GenMsg());
-//    }
-//    else
-//    {
-//        anIf(UHV2PVICollectorDBDbgEn, anWarn("Not Found Data!"));
-//        emit pause();
-//    }
+    }
+    else
+    {
+        anIf(UHV2PVICollectorDBDbgEn, anWarn("Not Found Data!"));
+        emit pause();
+    }
 }
 
 void UHV2PVICollectorDB::emitReadV()
 {
-    currentBP->SetBPNo(currentBPNo);
-    currentBP->ReadV().Ch(currentCH);
+    currentBP->ReadV();
     emit CommandOut(currentBP->GenMsg());
 }
 
 void UHV2PVICollectorDB::emitReadI()
 {
-    currentBP->SetBPNo(currentBPNo);
-    currentBP->ReadI().Ch(currentCH);
+    currentBP->ReadI();
     emit CommandOut(currentBP->GenMsg());
 }
 

@@ -5,7 +5,7 @@ wait4I::wait4I(UHV2PVICollectorDB *database) : dbPtr(database)
     anIf(UHV2PVICollectorStateDbgEn, anTrk("Construct Object"));
     timer.setInterval(database->waitIntervalMSecs);
     timer.setSingleShot(true);
-    QObject::connect(&timer, &QTimer::timeout, this, [&](){
+    QObject::connect(&timer, &QTimer::timeout, this, [database](){
         anIf(UHV2PVICollectorStateDbgEn, anWarn("Wait For I Timed Out !"));
         database->saveI();
     });

@@ -6,7 +6,7 @@ wait4P::wait4P(UHV2PVICollectorDB *database)
     timer.setParent(this);
     timer.setInterval(database->waitIntervalMSecs);
     timer.setSingleShot(true);
-    QObject::connect(&timer, &QTimer::timeout, this, [&](){
+    QObject::connect(&timer, &QTimer::timeout, this, [database](){
         anIf(UHV2PVICollectorStateDbgEn, anWarn("Wait For P Timed Out !"));
         database->saveP();
     });

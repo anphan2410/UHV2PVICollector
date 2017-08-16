@@ -6,7 +6,7 @@ emitReadI::emitReadI(UHV2PVICollectorDB *database) : dbPtr(database)
     timer.setParent(this);
     timer.setInterval(database->breakIntervalMSecs);
     timer.setSingleShot(true);
-    QObject::connect(&timer, &QTimer::timeout, this, [&](){
+    QObject::connect(&timer, &QTimer::timeout, this, [database](){
         database->emitReadI();
     });
 }
